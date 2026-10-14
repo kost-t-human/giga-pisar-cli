@@ -31,6 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import giga_core
 from pynput import keyboard
+from Xlib import X, display
 
 KEY = getattr(keyboard.Key, os.environ.get("PISAR_KEY", "ctrl_r"))
 MIN_HOLD = 0.4  # короче — случайное нажатие, не диктовка
@@ -58,8 +59,25 @@ rec = None
 started = 0.0
 other_key = False  # Ctrl нажат вместе с другой клавишей: это сочетание, а не диктовка
 send = False       # во время записи был нажат Shift: после вставки жмём Enter
-shift_down = False
+# Отпускание Shift отслеживать нельзя: при grp:ctrl_shift_toggle X присылает
+# его как ISO_Next_Group, и флаг залипал. Спрашиваем у X текущее состояние.
+xroot = display.Display().screen().root
+
+
+def shift_held() -> bool:
+    return bool(xroot.query_pointer().mask & X.ShiftMask)
+
+
 SHIFTS = (keyboard.Key.shift, keyboard.Key.shift_r)
+# Слушатель видит и наши собственные Shift+Insert и Enter (флаг injected
+# в X11 ненадёжен). Если в это время держат Ctrl для следующей диктовки,
+# чужой Shift превращал её в отправку. Пока вставляем, прочие клавиши глушим.
+quiet_until = 0.0
+
+
+def hush() -> None:
+    global quiet_until
+    quiet_until = time.monotonic() + 0.2
 
 
 def beep(path: str) -> None:
@@ -72,6 +90,7 @@ def paste(text: str) -> None:
     # (берут PRIMARY), и Qt/GTK/браузеры (берут CLIPBOARD).
     for sel in ("clipboard", "primary"):
         subprocess.run(["xclip", "-selection", sel], input=text.encode(), check=True)
+    hush()
     with kbd.pressed(keyboard.Key.shift):
         kbd.tap(keyboard.Key.insert)
 
@@ -94,6 +113,7 @@ def finish(proc, held: float, enter: bool) -> None:
     if enter:
         paste(text)
         time.sleep(0.05)  # дать вставке дойти до окна раньше Enter
+        hush()
         kbd.tap(keyboard.Key.enter)
     else:
         paste(text + " ")
@@ -101,16 +121,18 @@ def finish(proc, held: float, enter: bool) -> None:
 
 
 def on_press(key):
-    global rec, started, other_key, send, shift_down
+    global rec, started, other_key, send
+    if key != KEY and time.monotonic() < quiet_until:
+        return
     if key in SHIFTS:
-        shift_down = send = True
+        send = True
         return
     if key != KEY:
         other_key = True
         return
     if rec is None:
         other_key = False
-        send = shift_down
+        send = shift_held()
         beep(SOUND_START)
         started = time.monotonic()
         # Микрофон открываем только на время нажатия: между диктовками
@@ -125,10 +147,7 @@ def on_press(key):
 
 
 def on_release(key):
-    global rec, shift_down
-    if key in SHIFTS:
-        shift_down = False
-        return
+    global rec
     if key != KEY or rec is None:
         return
     proc, rec = rec, None
