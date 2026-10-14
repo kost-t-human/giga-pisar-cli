@@ -115,10 +115,16 @@ comes back after login.
 
 - right Ctrl: dictate, the text is pasted with a trailing space;
 - right Ctrl + Shift: dictate and press Enter after pasting, handy for chats;
+- the text goes through the clipboard, and 300 ms later the clipboard gets
+  back what was there before. Only one format comes back (text as text,
+  otherwise the first one offered, so an image survives, rich text from a
+  browser loses its formatting). A slow window may need more time:
+  `PISAR_CLIPBOARD_MS=800`, and `0` leaves the dictated text in the clipboard;
 - history of what was dictated: `$XDG_RUNTIME_DIR/pisar-history.log`. It lives
-  in memory, rotates at 256 KB and is gone after shutdown;
+  in memory, rotates at 256 KB and is gone after shutdown. Without
+  `XDG_RUNTIME_DIR` no history is kept;
 - a different key: `PISAR_KEY=alt_r` (any `pynput.keyboard.Key` name);
-- log: `$XDG_RUNTIME_DIR/pisar-hotkey.log`;
+- log: `$XDG_RUNTIME_DIR/pisar-hotkey.log` (or `~/.cache/pisar-hotkey.log`);
 - to turn it off, remove `~/.config/autostart/giga-pisar.desktop`.
 
 The microphone is opened only while the key is held. Between dictations
@@ -316,10 +322,16 @@ curl -fsSL .../install.sh | bash -s -- --hotkey
 
 - правый Ctrl — диктовка, текст вставляется с пробелом в конце;
 - правый Ctrl + Shift — после вставки ещё нажмётся Enter, удобно для чатов;
+- текст идёт через буфер обмена, и через 300 мс в буфер возвращается то, что
+  там было. Возвращается один формат (текст как текст, иначе первый
+  предложенный, так что картинка не пропадёт, а у текста из браузера
+  потеряется оформление). Медленному окну может не хватить времени —
+  `PISAR_CLIPBOARD_MS=800`, а `0` оставляет в буфере надиктованное;
 - история надиктованного — `$XDG_RUNTIME_DIR/pisar-history.log`. Живёт
-  в памяти, ротируется по 256 КБ и пропадает при выключении;
+  в памяти, ротируется по 256 КБ и пропадает при выключении. Без
+  `XDG_RUNTIME_DIR` история не ведётся;
 - другая клавиша — `PISAR_KEY=alt_r` (любое имя из `pynput.keyboard.Key`);
-- лог — `$XDG_RUNTIME_DIR/pisar-hotkey.log`;
+- лог — `$XDG_RUNTIME_DIR/pisar-hotkey.log` (или `~/.cache/pisar-hotkey.log`);
 - выключить — удалить `~/.config/autostart/giga-pisar.desktop`.
 
 Микрофон открывается только пока зажата клавиша. Между диктовками его

@@ -109,7 +109,10 @@ if [ "$HOTKEY" = "1" ]; then
   sudo tee /usr/local/bin/pisar-hotkey >/dev/null <<LAUNCHER
 #!/bin/bash
 export PISAR_MODEL_DIR="$DEST/model"
-exec "$DEST/.venv/bin/python" "$DEST/hotkey.py" > "\${XDG_RUNTIME_DIR:-/tmp}/pisar-hotkey.log" 2>&1
+# Без XDG_RUNTIME_DIR лог в ~/.cache, а не в общий /tmp под известным именем.
+LOG="\${XDG_RUNTIME_DIR:-\$HOME/.cache}"
+mkdir -p "\$LOG"
+exec "$DEST/.venv/bin/python" "$DEST/hotkey.py" > "\$LOG/pisar-hotkey.log" 2>&1
 LAUNCHER
   sudo chmod +x /usr/local/bin/pisar-hotkey
 
